@@ -4,13 +4,20 @@
  */
 
 // --- CONFIGURATION ---
-const SPREADSHEET_ID = '1G2ulJUy3cx2imjpdhTmRD0rjPMbvoE6OifcAH-1oOkk';
-const SHEET_NAME = 'All Job applications'; 
 const DAILY_LOOKBACK_DAYS = 1;
-const BATCH_SIZE = 10; 
+const BATCH_SIZE = 10;
+const SHEET_NAME = 'All Job applications';
 
-// *** API KEY CONFIGURED ***
-const GEMINI_API_KEY = 'AIzaSyAljMsea1SmXA47gSdkOOG3uj-NcMR0-KY'; 
+function getConfiguration() {
+  const scriptProperties = PropertiesService.getScriptProperties();
+  const SPREADSHEET_ID = scriptProperties.getProperty('SPREADSHEET_ID');
+  const GEMINI_API_KEY = scriptProperties.getProperty('GEMINI_API_KEY');
+
+  if (!SPREADSHEET_ID || !GEMINI_API_KEY) {
+    throw new Error("Missing Configuration! Please run setupScriptProperties() in setup.js first.");
+  }
+  return { SPREADSHEET_ID, GEMINI_API_KEY };
+}
 
 const SEARCH_QUERIES = [
   '("application" OR "interview" OR "offer" OR "candidate" OR "hiring team") -subject:("job alert" OR "digest" OR "newsletter")',
@@ -32,8 +39,8 @@ function mainJobTracker() {
  * 2. FULL SCAN (Manual)
  */
 function runFullScan() {
-  const START_DATE = "2025/10/01"; 
-  const END_DATE = "2025/11/21"; 
+  const START_DATE = "2025/10/01";
+  const END_DATE = "2025/11/21";
   console.log(`Starting Full Batch Scan from ${START_DATE} to ${END_DATE}`);
   processEmails(`after:${START_DATE} before:${END_DATE}`);
 }
@@ -41,41 +48,42 @@ function runFullScan() {
 // --- CORE PROCESSING ---
 
 function processEmails(timeQuery) {
+  const { SPREADSHEET_ID } = getConfiguration();
   const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_NAME);
   const lastRow = sheet.getLastRow();
   let existingData = [];
-  
+
   // Fetch all 7 columns (A to G) to verify existing companies
   if (lastRow > 1) {
-    existingData = sheet.getRange(2, 1, lastRow - 1, 7).getValues(); 
+    existingData = sheet.getRange(2, 1, lastRow - 1, 7).getValues();
   }
 
   let emailBatch = [];
-  const processedIds = []; 
+  const processedIds = [];
 
   SEARCH_QUERIES.forEach(baseQuery => {
     const searchString = `${baseQuery} ${timeQuery}`;
-    const threads = GmailApp.search(searchString, 0, 60); 
+    const threads = GmailApp.search(searchString, 0, 60);
 
     threads.forEach(thread => {
       if (processedIds.includes(thread.getId())) return;
       processedIds.push(thread.getId());
 
       const messages = thread.getMessages();
-      const latestMsg = messages[messages.length - 1]; 
-      
+      const latestMsg = messages[messages.length - 1];
+
       emailBatch.push({
         id: thread.getId(),
         subject: latestMsg.getSubject(),
-        body: latestMsg.getPlainBody().substring(0, 1500), 
+        body: latestMsg.getPlainBody().substring(0, 1500),
         sender: latestMsg.getFrom(),
         date: latestMsg.getDate()
       });
 
       if (emailBatch.length >= BATCH_SIZE) {
         processBatch(sheet, existingData, emailBatch);
-        emailBatch = []; 
-        Utilities.sleep(2000); 
+        emailBatch = [];
+        Utilities.sleep(2000);
       }
     });
   });
@@ -90,7 +98,7 @@ function processEmails(timeQuery) {
  */
 function processBatch(sheet, existingData, batch) {
   console.log(`Processing batch of ${batch.length} emails...`);
-  
+
   let batchText = "";
   batch.forEach((email, index) => {
     batchText += `\n--- EMAIL ID ${index} ---\nFrom: ${email.sender}\nSubject: ${email.subject}\nBody Snippet: ${email.body}\n`;
@@ -99,7 +107,7 @@ function processBatch(sheet, existingData, batch) {
   const prompt = `
     You are an expert HR tracking system. I will provide ${batch.length} emails.
     Analyze EACH email to determine if it is a job application update.
-    
+
     EMAILS TO ANALYZE:
     ${batchText}
 
@@ -108,11 +116,11 @@ function processBatch(sheet, existingData, batch) {
     2. Extract Company Name (clean format).
     3. Extract Job Title (or "General Application").
     4. Statuses: "Application Received", "Interview", "Assessment", "Declined", "Offer", "Action Required".
-    
+
     OUTPUT FORMAT:
     Return a JSON Object with a single key "results" containing an array of objects.
     Order must match the input emails (ID 0 to ${batch.length - 1}).
-    
+
     Example JSON:
     {
       "results": [
@@ -131,7 +139,7 @@ function processBatch(sheet, existingData, batch) {
 
   jsonResponse.results.forEach(result => {
     if (result.is_job_related && result.company && result.company !== "Unknown") {
-      const originalEmail = batch[result.id]; 
+      const originalEmail = batch[result.id];
       if (originalEmail) {
         updateOrAddRow(sheet, existingData, originalEmail.date, result);
       }
@@ -140,10 +148,10 @@ function processBatch(sheet, existingData, batch) {
 }
 
 function callGeminiAPI(prompt) {
-  if (!GEMINI_API_KEY) throw new Error("API Key Missing");
-  
+  const { GEMINI_API_KEY } = getConfiguration();
+
   const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-  
+
   const payload = {
     "contents": [{ "parts": [{ "text": prompt }] }]
   };
@@ -166,7 +174,7 @@ function callGeminiAPI(prompt) {
 
     const rawText = json.candidates[0].content.parts[0].text;
     const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-    
+
     return JSON.parse(cleanJson);
 
   } catch (e) {
@@ -180,7 +188,7 @@ function callGeminiAPI(prompt) {
  */
 function deriveCleanStatus(rawStatus) {
   const s = rawStatus.toLowerCase();
-  
+
   if (s.includes("application received") || s.includes("sent") || s.includes("submitted")) {
     return "Application Received";
   }
@@ -205,13 +213,13 @@ function updateOrAddRow(sheet, existingData, date, result) {
   let foundIndex = -1;
   for (let i = 0; i < existingData.length; i++) {
     // COMPANY IS NOW INDEX 2 (Column C)
-    const existingCompany = existingData[i][2].toString().toLowerCase(); 
+    const existingCompany = existingData[i][2].toString().toLowerCase();
     const newCompany = company.toLowerCase();
-    
+
     // Robust matching
-    if (existingCompany === newCompany || 
-       (existingCompany.includes(newCompany) && newCompany.length > 4) || 
-       (newCompany.includes(existingCompany) && existingCompany.length > 4)) {
+    if (existingCompany === newCompany ||
+      (existingCompany.includes(newCompany) && newCompany.length > 4) ||
+      (newCompany.includes(existingCompany) && existingCompany.length > 4)) {
       foundIndex = i;
       break;
     }
@@ -220,25 +228,25 @@ function updateOrAddRow(sheet, existingData, date, result) {
   if (foundIndex > -1) {
     // --- UPDATE EXISTING ---
     // Row number is Index + 2 (because of Header + 0-index)
-    const rowNumber = foundIndex + 2; 
-    
+    const rowNumber = foundIndex + 2;
+
     // CURRENT STATUS IS NOW INDEX 4 (Column E)
-    const currentStatus = existingData[foundIndex][4]; 
-    
+    const currentStatus = existingData[foundIndex][4];
+
     // Update Last Update (Column G / Index 7 in sheet terms)
-    sheet.getRange(rowNumber, 7).setValue(formattedDate); 
+    sheet.getRange(rowNumber, 7).setValue(formattedDate);
 
     const weakStatuses = ["Application Received"];
     const isUpgrade = !weakStatuses.includes(status);
     const isSame = status === currentStatus;
-    
+
     // Update status only if meaningful change
     if (!isSame && (isUpgrade || weakStatuses.includes(currentStatus))) {
-       sheet.getRange(rowNumber, 5).setValue(status);      // Col E (Status)
-       sheet.getRange(rowNumber, 6).setValue(cleanStatus); // Col F (Cleaned)
-       console.log(`Updated ${company}: ${status} -> ${cleanStatus}`);
+      sheet.getRange(rowNumber, 5).setValue(status);      // Col E (Status)
+      sheet.getRange(rowNumber, 6).setValue(cleanStatus); // Col F (Cleaned)
+      console.log(`Updated ${company}: ${status} -> ${cleanStatus}`);
     } else {
-       console.log(`Updated Date only for ${company}`);
+      console.log(`Updated Date only for ${company}`);
     }
 
   } else {
@@ -251,10 +259,10 @@ function updateOrAddRow(sheet, existingData, date, result) {
         nextSN = parseInt(lastSN) + 1;
       }
     }
-    
+
     // Append Row: S/N | Date | Company | Title | Status | Cleaned | Updated
     sheet.appendRow([nextSN, formattedDate, company, title, status, cleanStatus, formattedDate]);
-    
+
     // Update local cache to prevent duplicate adds in same batch
     existingData.push([nextSN, formattedDate, company, title, status, cleanStatus, formattedDate]);
     console.log(`Added ${company} (S/N: ${nextSN})`);

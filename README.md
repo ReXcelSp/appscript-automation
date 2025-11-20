@@ -32,6 +32,29 @@ To install `clasp` globally, run:
 npm install -g @google/clasp
 ```
 
+### 🔐 Security & Setup
+
+**Important:** This project uses **Script Properties** to store sensitive API keys. Do not commit your keys to GitHub!
+
+1. **Configure Secrets**
+   Open `job-application/setup.js` and replace the placeholder values with your actual keys:
+   ```javascript
+   const SECRETS = {
+     'GEMINI_API_KEY': 'YOUR_ACTUAL_KEY',
+     'SPREADSHEET_ID': 'YOUR_ACTUAL_ID'
+   };
+   ```
+
+2. **Push & Run Setup**
+   ```bash
+   cd job-application
+   clasp push
+   ```
+   Then, open the script in your browser (`clasp open`), select the `setupScriptProperties` function, and click **Run**.
+
+3. **Clean Up**
+   Once run, you can revert the changes to `setup.js` or delete the secrets from the file so they aren't committed.
+
 ### Initial Setup
 
 1. **Clone the repository**

@@ -1,0 +1,6 @@
+# Ignore the setup file containing secrets
+job-application/setup.js
+
+# Ignore system files
+.DS_Store
+node_modules/
