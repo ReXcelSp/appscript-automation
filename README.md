@@ -1,151 +1,108 @@
 # Appscript Automation
 
-This repository is a collection of Google Apps Script automations managed with [`clasp`](https://github.com/google/clasp) and version-controlled on GitHub.
+This repository serves as a monorepo for various Google Apps Script automation projects. Each project is contained within its own subdirectory and is managed using [`clasp`](https://github.com/google/clasp) for version control.
 
-Each subfolder in this repo represents a **separate Apps Script project**.  
-Current projects:
+## 📂 Repository Structure
 
-## Repository Structure
+The repository is organized by project. Each folder represents a standalone Apps Script project.
 
 ```text
 appscript-automation/
-  foldername/
-    .clasp.json       # Links this folder to a specific Apps Script project
-    appsscript.json   # Apps Script project configuration
-    filename.js # Main script file
-  README.md           # This file
+├── job-application/       # Project: AI Job Application Tracker
+│   ├── .clasp.json        # Project configuration
+│   ├── appsscript.json    # Manifest file
+│   └── JobApplication.js  # Main script
+└── README.md              # This file
+```
 
-Rule of thumb:
-One folder = one Apps Script project = one .clasp.json.
+---
 
-You can add more projects later by creating more subfolders that follow the same pattern.
+## 🚀 Getting Started
 
-⸻
+### Prerequisites
 
-Prerequisites
+Ensure you have the following installed:
+- **Node.js** (LTS version recommended)
+- **npm** (included with Node.js)
+- **clasp** (Google Apps Script CLI)
 
-To work with any project in this repo you’ll need:
-	•	A Google account with access to the corresponding Apps Script project
-	•	Node.js￼ (LTS version recommended)
-	•	npm (comes with Node)
-	•	clasp installed globally:
+To install `clasp` globally, run:
 
+```bash
 npm install -g @google/clasp
+```
 
+### Initial Setup
 
-⸻
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/<your-username>/appscript-automation.git
+   cd appscript-automation
+   ```
 
-Getting Started (for someone cloning the repo)
-	1.	Clone the repo
+2. **Login to Google** (One-time setup)
+   ```bash
+   clasp login
+   ```
+   This will open a browser window. Sign in with the Google account that manages your scripts.
 
-git clone https://github.com/<your-username>/appscript-automation.git
-cd appscript-automation
+---
 
+## 🛠️ Workflow
 
-	2.	Install clasp (first time only)
+### Working on an Existing Project
 
-npm install -g @google/clasp
+1. **Navigate to the project folder**
+   ```bash
+   cd job-application
+   ```
 
+2. **Pull latest changes from Google (Optional)**
+   If you or someone else made changes directly in the Apps Script editor:
+   ```bash
+   clasp pull
+   ```
 
-	3.	Log in to clasp (first time only)
+3. **Make your changes**
+   Edit the `.js` files in your preferred code editor.
 
-clasp login
+4. **Push changes to Google**
+   Deploy your local changes to the Apps Script project:
+   ```bash
+   clasp push
+   ```
+   > **⚠️ Warning:** This overwrites the code on Google's servers with your local files.
 
-This opens a browser window. Sign in with the Google account that has access to the Apps Script projects you want to work on.
+### Adding a New Project
 
-⸻
+To add a new automation script (e.g., `calendar-reminders`):
 
-Working on an Existing Project (e.g. job-application)
-	1.	Go into the project folder
+1. **Create a new folder**
+   ```bash
+   mkdir calendar-reminders
+   cd calendar-reminders
+   ```
 
-cd appscript-automation/job-application
+2. **Initialize the project**
+   
+   **Option A: Create a new script**
+   ```bash
+   clasp create --type standalone --title "Calendar Reminders"
+   ```
 
+   **Option B: Clone an existing script**
+   Find the `Script ID` from your project URL (e.g., `https://script.google.com/d/<SCRIPT_ID>/edit`) and run:
+   ```bash
+   clasp clone <SCRIPT_ID>
+   ```
 
-	2.	Check the Apps Script status (optional but useful)
+---
 
-clasp status
+## 🤝 Contributing
 
-This shows differences between your local files and the remote Apps Script project.
-
-	3.	Edit code
-	•	Open the folder in your IDE.
-	•	Modify JobApplication.js or create additional .js / .gs files as needed.
-	4.	Push changes to Apps Script
-When you’re ready to deploy the updated code to Google Apps Script:
-
-clasp push
-
-⚠️ Note: clasp push overwrites the code in the linked Apps Script project with the files from this folder. Make sure your local code is what you want deployed.
-
-	5.	Commit and push changes to GitHub
-From the repo root or project folder:
-
-git add .
-git commit -m "Describe your change"
-git push
-
-
-
-⸻
-
-Creating a New Apps Script Project in This Repo
-
-To add a new project (for example, calendar-reminders):
-	1.	From the repo root:
-
-cd appscript-automation
-mkdir calendar-reminders
-cd calendar-reminders
-
-
-	2.	Option A – Create a brand new Apps Script project
-
-clasp create --type standalone --title "Calendar Reminders"
-
-
-	3.	Option B – Link to an existing Apps Script project
-Get the SCRIPT_ID from the Apps Script URL, then:
-
-clasp clone <SCRIPT_ID>
-
-
-
-This will generate a new .clasp.json and appsscript.json inside the new folder.
-From then on, you work in that folder and use clasp push just like with job-application.
-
-⸻
-
-Contributing
-	1.	Fork the repository (if you’re an external contributor).
-	2.	Clone your fork and set up clasp as described above.
-	3.	Make changes in the appropriate project folder.
-	4.	Use:
-
-clasp push
-
-only if you have permission to update the linked Apps Script project; otherwise, you can:
-	•	Create your own Apps Script project
-	•	Run clasp create / clasp clone in a new folder
-	•	Update .clasp.json to point to your own script
-
-	5.	Commit your changes and open a pull request with a clear description of:
-	•	What you changed
-	•	Which project folder(s) you touched
-	•	Any setup notes
-
-⸻
-
-Typical Workflow Summary
-	1.	git pull – get latest changes
-	2.	cd <project-folder> – e.g. job-application
-	3.	clasp status – see what’s changed (optional)
-	4.	Edit code in your IDE
-	5.	clasp push – deploy to Apps Script
-	6.	Test in Google (run functions / triggers as needed)
-	7.	git add . && git commit -m "..." && git push – save to GitHub
-
-⸻
-
-✏️ Feel free to update the project descriptions and commands here to match your exact setup or naming conventions.
-
-If you want a separate, shorter README just for the `job-application` folder, I can generate a second one focused only on that project.
+1. **Fork** the repository.
+2. **Clone** your fork locally.
+3. Create a **feature branch**: `git checkout -b my-new-feature`.
+4. **Commit** your changes: `git commit -m 'Add some feature'`.
+5. **Push** to the branch: `git push origin my-new-feature`.
+6. Submit a **Pull Request**.
