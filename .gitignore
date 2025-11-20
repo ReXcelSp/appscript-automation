@@ -1,5 +1,6 @@
 # Ignore the setup file containing secrets
 job-application/setup.js
+job-application/.clasp.json
 
 # Ignore system files
 .DS_Store
